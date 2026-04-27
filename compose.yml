@@ -1,0 +1,13 @@
+services:
+  hallen:
+    build: .
+    container_name: hallen
+    restart: unless-stopped
+    env_file:
+      - /home/spnrck/repos/server-spnrck/deploy/apps/hallen.runtime.env
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    external: true

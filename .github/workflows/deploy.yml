@@ -1,0 +1,26 @@
+name: Deploy to spnrck
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64]
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY != 'false'
+    environment: production
+    steps:
+      - name: Deploy on server
+        shell: bash
+        run: |
+          set -euo pipefail
+          SERVER_SPNRCK_DIR="${{ vars.SERVER_SPNRCK_DIR }}"
+          if [ -z "$SERVER_SPNRCK_DIR" ]; then
+            SERVER_SPNRCK_DIR="$HOME/repos/server-spnrck"
+          fi
+          "$SERVER_SPNRCK_DIR/scripts/deploy-compose-app.sh" hallen

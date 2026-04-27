@@ -5,26 +5,59 @@ import { getDb } from '@/lib/mongodb'
 import LoginForm from './LoginForm'
 import EmailCopy from './EmailCopy'
 
-interface BarItem {
-  key: string
-  label: string
-  count: number
+interface BarItem { key: string; label: string; count: number }
+
+const LABELS = {
+  respondentType: { ungdom: 'Ungdom', vuxen: 'Vuxen', foralder: 'Förälder/vårdnadshavare', annat: 'Annat' },
+  membershipInterest: {
+    supersaker: 'Supersäker på att bli medlem',
+    troligen: 'Skulle troligen bli medlem',
+    kanske: 'Kanske, om det blir bra',
+    nyfiken: 'Nyfiken men osäker',
+    inte: 'Tror inte att jag blir medlem',
+  },
+  activities: {
+    gym: 'Gym/styrketräning', klattring: 'Klättring', lek: 'Lek/rörelse för barn',
+    parkour: 'Parkour', crossfit: 'Crossfit/funktionell träning', skejt: 'Skejt',
+    rorlighet: 'Rörlighet/yoga/stretch', annat: 'Annat',
+  },
+  monthlyPrice: { '400': '400 kr', '300': '300 kr', '200': '200 kr', '100': '100 kr', 'avgörande': 'Priset avgörande', 'vet_inte': 'Vet inte' },
+  householdInterest: { barn: 'Ja, barn/ungdomar', vuxna: 'Ja, vuxna', bada: 'Ja, båda', nej: 'Nej', vet_inte: 'Vet inte' },
+  wantToHelp: { ja: 'Ja, gärna', kanske: 'Kanske, kontakta mig', inte_nu: 'Inte just nu' },
+}
+
+const ORDER: Record<keyof typeof LABELS, string[]> = {
+  respondentType: ['ungdom', 'vuxen', 'foralder', 'annat'],
+  membershipInterest: ['supersaker', 'troligen', 'kanske', 'nyfiken', 'inte'],
+  activities: ['gym', 'klattring', 'lek', 'parkour', 'crossfit', 'skejt', 'rorlighet', 'annat'],
+  monthlyPrice: ['400', '300', '200', '100', 'avgörande', 'vet_inte'],
+  householdInterest: ['barn', 'vuxna', 'bada', 'nej', 'vet_inte'],
+  wantToHelp: ['ja', 'kanske', 'inte_nu'],
+}
+
+type AggRow = { _id: string; count: number }
+
+function toItems(agg: AggRow[], field: keyof typeof LABELS): BarItem[] {
+  const map = Object.fromEntries(agg.map(r => [r._id, r.count]))
+  return ORDER[field].map(key => ({
+    key,
+    label: (LABELS[field] as Record<string, string>)[key] ?? key,
+    count: map[key] ?? 0,
+  }))
 }
 
 function BarChart({ items, total }: { items: BarItem[]; total: number }) {
-  if (items.length === 0) return <p className="text-stone-400 text-sm">Inga svar ännu.</p>
-
-  const max = Math.max(...items.map(i => i.count))
-
+  if (total === 0) return <p className="text-stone-400 text-sm">Inga svar ännu.</p>
+  const max = Math.max(...items.map(i => i.count), 1)
   return (
     <div className="space-y-2.5">
       {items.map(item => (
         <div key={item.key} className="flex items-center gap-3">
-          <span className="w-44 text-sm text-stone-600 text-right shrink-0 leading-tight">{item.label}</span>
+          <span className="w-48 text-sm text-stone-600 text-right shrink-0 leading-tight">{item.label}</span>
           <div className="flex-1 bg-stone-100 rounded-full h-5 overflow-hidden">
             <div
               className="h-full bg-stone-700 rounded-full transition-all duration-500"
-              style={{ width: max > 0 ? `${(item.count / max) * 100}%` : '0%' }}
+              style={{ width: `${(item.count / max) * 100}%` }}
             />
           </div>
           <span className="text-sm text-stone-500 w-16">
@@ -36,7 +69,7 @@ function BarChart({ items, total }: { items: BarItem[]; total: number }) {
   )
 }
 
-function StatCard({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="bg-white rounded-2xl border border-stone-200 p-6">
       <h2 className="text-base font-semibold text-stone-800 mb-5">{title}</h2>
@@ -48,154 +81,129 @@ function StatCard({ title, children }: { title: string; children: React.ReactNod
 export default async function StatsPage() {
   const cookieStore = await cookies()
   const auth = cookieStore.get('stats_auth')?.value
-
-  if (!auth || auth !== process.env.STATS_PASSWORD) {
-    return <LoginForm />
-  }
+  if (!auth || auth !== process.env.STATS_PASSWORD) return <LoginForm />
 
   const db = await getDb()
   const col = db.collection('submissions')
 
   const [
     total,
-    interestAgg,
-    activitiesAgg,
-    frequencyAgg,
-    contactCount,
-    memberCount,
-    memberDocs,
+    respondentAggRaw,
+    membershipAggRaw,
+    activityAggRaw,
+    priceAggRaw,
+    householdAggRaw,
+    helpAggRaw,
+    likelyMembers,
+    contactDocs,
   ] = await Promise.all([
     col.countDocuments(),
-    col.aggregate([{ $group: { _id: '$interestLevel', count: { $sum: 1 } } }]).toArray(),
+    col.aggregate([{ $group: { _id: '$respondentType', count: { $sum: 1 } } }]).toArray(),
+    col.aggregate([{ $group: { _id: '$membershipInterest', count: { $sum: 1 } } }]).toArray(),
     col.aggregate([
       { $unwind: { path: '$activities', preserveNullAndEmpty: false } },
       { $group: { _id: '$activities', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]).toArray(),
-    col.aggregate([{ $group: { _id: '$visitFrequency', count: { $sum: 1 } } }]).toArray(),
-    col.countDocuments({ wantContact: true }),
-    col.countDocuments({ wantMembership: true }),
+    col.aggregate([{ $group: { _id: '$monthlyPrice', count: { $sum: 1 } } }]).toArray(),
+    col.aggregate([{ $group: { _id: '$householdInterest', count: { $sum: 1 } } }]).toArray(),
+    col.aggregate([{ $group: { _id: '$wantToHelp', count: { $sum: 1 } } }]).toArray(),
+    col.countDocuments({ membershipInterest: { $in: ['supersaker', 'troligen'] } }),
     col
-      .find({ wantMembership: true }, { projection: { name: 1, email: 1, createdAt: 1 } })
+      .find(
+        { membershipInterest: { $in: ['supersaker', 'troligen'] }, contactInfo: { $ne: '' } },
+        { projection: { contactName: 1, contactInfo: 1, membershipInterest: 1 } }
+      )
       .sort({ createdAt: -1 })
       .toArray(),
   ])
 
-  const interestOrder = ['mycket', 'ganska', 'lite', 'osaker']
-  const interestLabels: Record<string, string> = {
-    mycket: 'Mycket intresserad',
-    ganska: 'Ganska intresserad',
-    lite: 'Lite / mest nyfiken',
-    osaker: 'Vet inte än',
-  }
-  const activityLabels: Record<string, string> = {
-    yoga: 'Yoga & meditation',
-    pilates: 'Pilates',
-    dans: 'Dans',
-    styrka: 'Styrketräning',
-    kampsport: 'Kampsport / boxning',
-    rorlighet: 'Rörlighet & stretching',
-    barn: 'Barnaktiviteter',
-    annat: 'Annat',
-  }
-  const frequencyOrder = ['dagligen', 'nagra_ganger', 'en_gang', 'sallan', 'vet_inte']
-  const frequencyLabels: Record<string, string> = {
-    dagligen: 'Dagligen',
-    nagra_ganger: 'Några gånger/vecka',
-    en_gang: 'En gång/vecka',
-    sallan: 'Mer sällan',
-    vet_inte: 'Vet inte',
-  }
+  const respondentAgg = respondentAggRaw as AggRow[]
+  const membershipAgg = membershipAggRaw as AggRow[]
+  const activityAgg = activityAggRaw as AggRow[]
+  const priceAgg = priceAggRaw as AggRow[]
+  const householdAgg = householdAggRaw as AggRow[]
+  const helpAgg = helpAggRaw as AggRow[]
 
-  const interestMap = Object.fromEntries(interestAgg.map(r => [r._id, r.count]))
-  const interestItems: BarItem[] = interestOrder.map(key => ({
-    key,
-    label: interestLabels[key] ?? key,
-    count: interestMap[key] ?? 0,
-  }))
-
-  const activityItems: BarItem[] = activitiesAgg.map(r => ({
-    key: r._id,
-    label: activityLabels[r._id] ?? r._id,
-    count: r.count,
-  }))
-
-  const freqMap = Object.fromEntries(frequencyAgg.map(r => [r._id, r.count]))
-  const freqItems: BarItem[] = frequencyOrder.map(key => ({
-    key,
-    label: frequencyLabels[key] ?? key,
-    count: freqMap[key] ?? 0,
-  }))
-
-  const memberEmails = memberDocs.map(m => m.email as string)
+  const helpYes = helpAgg.find(r => r._id === 'ja')?.count ?? 0
+  const helpMaybe = helpAgg.find(r => r._id === 'kanske')?.count ?? 0
+  const contactInfoList = contactDocs.map(d => d.contactInfo as string)
 
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
 
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-stone-900">Statistik – Hallen</h1>
-            <p className="text-stone-500 text-sm mt-0.5">Intresseanmälningar för rörelselokal på Väveriet</p>
+            <h1 className="text-2xl font-bold text-stone-900">Statistik – Rum för rörelse</h1>
+            <p className="text-stone-500 text-sm mt-0.5">Väveriet / Spinnrock</p>
           </div>
-          <div className="bg-stone-800 text-white text-3xl font-bold px-5 py-3 rounded-xl">
-            {total}
-            <span className="text-stone-400 text-sm font-normal ml-1">svar</span>
-          </div>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-stone-200 p-5 text-center">
-            <div className="text-3xl font-bold text-stone-800">{memberCount}</div>
-            <div className="text-sm text-stone-500 mt-1">vill bli MEDLEMMAR</div>
-            <div className="text-xs text-stone-400 mt-0.5">
-              ({total > 0 ? Math.round((memberCount / total) * 100) : 0}% av alla)
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-stone-200 p-5 text-center">
-            <div className="text-3xl font-bold text-stone-800">{contactCount}</div>
-            <div className="text-sm text-stone-500 mt-1">vill bli kontaktade</div>
-            <div className="text-xs text-stone-400 mt-0.5">
-              ({total > 0 ? Math.round((contactCount / total) * 100) : 0}% av alla)
-            </div>
+          <div className="bg-stone-800 text-white px-5 py-3 rounded-xl text-center">
+            <div className="text-3xl font-bold">{total}</div>
+            <div className="text-stone-400 text-xs">svar</div>
           </div>
         </div>
 
-        {/* Interest level chart */}
-        <StatCard title="Intressenivå">
-          <BarChart items={interestItems} total={total} />
-        </StatCard>
+        {/* Summary */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl border border-stone-200 p-4 text-center">
+            <div className="text-2xl font-bold text-stone-800">{likelyMembers}</div>
+            <div className="text-xs text-stone-500 mt-1 leading-tight">troliga/säkra<br />medlemmar</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-stone-200 p-4 text-center">
+            <div className="text-2xl font-bold text-stone-800">{helpYes + helpMaybe}</div>
+            <div className="text-xs text-stone-500 mt-1 leading-tight">vill hjälpa<br />till</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-stone-200 p-4 text-center">
+            <div className="text-2xl font-bold text-stone-800">{contactDocs.length}</div>
+            <div className="text-xs text-stone-500 mt-1 leading-tight">lämnade<br />kontaktinfo</div>
+          </div>
+        </div>
 
-        {/* Activities chart */}
-        <StatCard title="Efterfrågade aktiviteter">
-          <BarChart items={activityItems} total={total} />
-        </StatCard>
+        <Card title="1. Vem svarar?">
+          <BarChart items={toItems(respondentAgg, 'respondentType')} total={total} />
+        </Card>
 
-        {/* Visit frequency chart */}
-        <StatCard title="Besöksfrekvens">
-          <BarChart items={freqItems} total={total} />
-        </StatCard>
+        <Card title="2. Intresse av att bli medlem">
+          <BarChart items={toItems(membershipAgg, 'membershipInterest')} total={total} />
+        </Card>
 
-        {/* Member emails */}
-        <StatCard title={`Potentiella medlemmar (${memberCount} st)`}>
-          {memberDocs.length === 0 ? (
-            <p className="text-stone-400 text-sm">Ingen har angett att de vill bli medlem ännu.</p>
+        <Card title="3. Önskade aktiviteter">
+          <BarChart items={toItems(activityAgg, 'activities')} total={total} />
+        </Card>
+
+        <Card title="4. Betalningsvilja per månad">
+          <BarChart items={toItems(priceAgg, 'monthlyPrice')} total={total} />
+        </Card>
+
+        <Card title="5. Fler i hushållet intresserade?">
+          <BarChart items={toItems(householdAgg, 'householdInterest')} total={total} />
+        </Card>
+
+        <Card title="6. Vill hjälpa till?">
+          <BarChart items={toItems(helpAgg, 'wantToHelp')} total={total} />
+        </Card>
+
+        <Card title={`Kontaktinfo – troliga/säkra medlemmar (${contactDocs.length} st)`}>
+          {contactDocs.length === 0 ? (
+            <p className="text-stone-400 text-sm">Inga lämnade kontaktinfo än.</p>
           ) : (
             <>
               <div className="bg-stone-50 rounded-xl border border-stone-200 divide-y divide-stone-100 max-h-72 overflow-y-auto">
-                {memberDocs.map((m, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className="text-stone-800 font-medium">{m.name as string}</span>
-                    <span className="text-stone-500">{m.email as string}</span>
+                {contactDocs.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm gap-4">
+                    <span className="text-stone-800 font-medium shrink-0">{(d.contactName as string) || '–'}</span>
+                    <span className="text-stone-500 truncate">{d.contactInfo as string}</span>
+                    <span className="text-xs text-stone-400 shrink-0">
+                      {d.membershipInterest === 'supersaker' ? 'Supersäker' : 'Troligen'}
+                    </span>
                   </div>
                 ))}
               </div>
-              <EmailCopy emails={memberEmails} />
+              <EmailCopy emails={contactInfoList} />
             </>
           )}
-        </StatCard>
+        </Card>
 
       </div>
     </main>

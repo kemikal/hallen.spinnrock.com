@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Hallen – Rörelselokal på Väveriet',
-  description: 'Anmäl ditt intresse för en ny rörelselokal på Väveriet i Spinnrock',
+  title: 'Rum för rörelse i Väveriet',
+  description: 'Vi undersöker möjligheten att skapa ett gemensamt rum för rörelse i Väveriet. Fyll i formuläret och hjälp oss förstå intresset.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

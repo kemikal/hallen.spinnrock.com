@@ -102,17 +102,27 @@ export default function HomePage() {
     <main className="min-h-screen bg-stone-50 py-12 px-4">
       <div className="max-w-xl mx-auto">
         {/* Header */}
-        <div className="mb-8 text-center">
+        <div className="mb-8">
           <div className="inline-block bg-stone-800 text-stone-100 text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
             Spinnrock / Väveriet
           </div>
-          <h1 className="text-3xl font-bold text-stone-900 mb-3">
-            Hallen – ny rörelselokal
+          <h1 className="text-3xl font-bold text-stone-900 mb-4">
+            Rum för rörelse i Väveriet
           </h1>
-          <p className="text-stone-600 text-base leading-relaxed">
-            Vi undersöker intresset för att öppna en rörelselokal i Hallen på Väveriet.
-            Fyll i formuläret och hjälp oss förstå vad du behöver – det tar bara 2 minuter!
-          </p>
+          <div className="text-stone-600 text-base leading-relaxed space-y-3">
+            <p>
+              Vi undersöker möjligheten att skapa ett gemensamt rum för rörelse i Väveriet – en flexibel hall där både barn, unga och vuxna kan träna, leka och röra sig på olika sätt.
+            </p>
+            <p>
+              Tanken är att rummet skulle kunna rymma sådant som gym, klättring, parkour, lek, crossfit, rörlighetsträning, skejt eller andra fysiska aktiviteter – beroende på vad det finns behov av och vad vi tillsammans kan få till.
+            </p>
+            <p>
+              För att veta om idén är möjlig behöver vi nu undersöka hur stort intresset är i byn. Skulle du kunna tänka dig att bli medlem och betala en månadsavgift för att få tillgång till ett sådant rum?
+            </p>
+            <p>
+              Dina svar hjälper oss att förstå vilket upplägg, vilken prisnivå och vilken typ av verksamhet som skulle kunna fungera.
+            </p>
+          </div>
         </div>
 
         {/* Form card */}

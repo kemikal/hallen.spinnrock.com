@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const RESPONDENT_TYPES = [
@@ -51,6 +51,42 @@ const WANT_TO_HELP = [
   { key: 'kanske', label: 'Kanske, kontakta mig' },
   { key: 'inte_nu', label: 'Inte just nu' },
 ]
+
+function BakgrundModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[85vh] overflow-y-auto p-8 relative"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 transition text-2xl leading-none"
+          aria-label="Stäng"
+        >
+          &times;
+        </button>
+        <h2 className="text-xl font-bold text-stone-900 mb-4">Bakgrund till projektet</h2>
+        <div className="text-stone-600 text-sm leading-relaxed space-y-4">
+          <p>Under våren 2026 genomfördes en förstudie finansierad av Leader Sjuhärad för att undersöka förutsättningarna för en kombinerad klätter- &amp; skejthall i Väveriet. Slutsatsen drogs att en sådan kombo blev svår att genomföra som man hade tänkt sig men att intresse verkade finnas för en lokal med utrymme för blandad fysisk aktivitet för stora som små – en sorts "rörelserum".</p>
+          <p>Bifogade bilder är skissförslag från arkitekten Moa Rundlöf som var inkopplad i förstudien. Moa har även ritat Bröt och Uddebo Lerverkstad och är väl insatt i Väveriets lokaler och vision.</p>
+          <p>Söndag 26 april hölls ett öppet möte i Väveriet där förstudien och skissförslaget presenterades samt idéer på hur en sådan här lokal skulle kunna drivas och finansiera sin hyra. Olika idéer på justeringar av skissförslaget dök också upp.</p>
+          <p>Nu är förstudiens planerade träffar slut men för att fånga upp tankarna beslutades att ett sådant här intresseformulär skickas ut.</p>
+          <p className="font-medium text-stone-800">Finns det ett nog stort intresse så kanske detta är något att ta vidare!</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function RadioGroup({
   name,
@@ -106,6 +142,7 @@ export default function HomePage() {
   const [contactInfo, setContactInfo] = useState('')
   const [comments, setComments] = useState('')
 
+  const [bakgrundOpen, setBakgrundOpen] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -158,6 +195,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-stone-50 py-12 px-4">
+      {bakgrundOpen && <BakgrundModal onClose={() => setBakgrundOpen(false)} />}
       <div className="max-w-xl mx-auto">
 
         {/* Header */}
@@ -174,6 +212,13 @@ export default function HomePage() {
             <p>För att veta om idén är möjlig behöver vi nu undersöka hur stort intresset är i byn. Skulle du kunna tänka dig att bli medlem och betala en månadsavgift för att få tillgång till ett sådant rum?</p>
             <p>Dina svar hjälper oss att förstå vilket upplägg, vilken prisnivå och vilken typ av verksamhet som skulle kunna fungera.</p>
           </div>
+          <button
+            onClick={() => setBakgrundOpen(true)}
+            className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-stone-700 border border-stone-300 rounded-lg px-4 py-2 hover:bg-stone-100 transition"
+          >
+            <span>📖</span>
+            Bakgrund till projektet – Läs mer!
+          </button>
         </div>
 
         {/* Form */}

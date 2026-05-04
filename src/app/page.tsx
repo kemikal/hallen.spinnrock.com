@@ -26,6 +26,7 @@ const ACTIVITIES = [
   { key: 'crossfit', label: 'Crossfit/funktionell träning' },
   { key: 'skejt', label: 'Skejt' },
   { key: 'rorlighet', label: 'Rörlighet/yoga/stretch' },
+  { key: 'grupptraning', label: 'Öppet utrymme för gruppträning/cirkelträning/pingis' },
   { key: 'annat', label: 'Annat' },
 ]
 
@@ -50,6 +51,12 @@ const WANT_TO_HELP = [
   { key: 'ja', label: 'Ja, gärna' },
   { key: 'kanske', label: 'Kanske, kontakta mig' },
   { key: 'inte_nu', label: 'Inte just nu' },
+]
+
+const LOCATIONS = [
+  { key: 'uddebo', label: 'I Uddebo/Strömsfors' },
+  { key: 'tranemo', label: 'I Tranemo/Svenljunga' },
+  { key: 'langre_bort', label: 'Längre bort' },
 ]
 
 function BakgrundModal({ onClose }: { onClose: () => void }) {
@@ -83,6 +90,11 @@ function BakgrundModal({ onClose }: { onClose: () => void }) {
           <p>Nu är förstudiens planerade träffar slut men för att fånga upp tankarna beslutades att ett sådant här intresseformulär skickas ut.</p>
           <p className="font-medium text-stone-800">Finns det ett nog stort intresse så kanske detta är något att ta vidare!</p>
         </div>
+        <div className="mt-6 space-y-4">
+          <p className="text-sm text-stone-600">Ritningarna avser förrummet i väveriet. Ingången med stora porten innan stora hallen.</p>
+          <img src="/skiss.jpg" alt="Skissförslag från arkitekt Moa Rundlöf" className="w-full rounded-xl" />
+          <img src="/plan.jpg" alt="Planförslag med justeringar" className="w-full rounded-xl" />
+        </div>
       </div>
     </div>
   )
@@ -111,7 +123,7 @@ function RadioGroup({
             onChange={() => onChange(key)}
             className="w-4 h-4 mt-0.5 shrink-0 text-stone-800 border-stone-400 focus:ring-stone-700 cursor-pointer"
           />
-          <span className="text-stone-700 group-hover:text-stone-900 transition leading-snug">{label}</span>
+          <span className="text-stone-700 text-base group-hover:text-stone-900 transition leading-snug">{label}</span>
         </label>
       ))}
     </div>
@@ -120,7 +132,7 @@ function RadioGroup({
 
 function QuestionLabel({ n, text, required }: { n: number; text: string; required?: boolean }) {
   return (
-    <p className="text-sm font-semibold text-stone-800 mb-3">
+    <p className="text-base font-semibold text-stone-800 mb-3">
       <span className="text-stone-400 font-normal mr-1">{n}.</span>
       {text}
       {required && <span className="text-red-500 ml-1">*</span>}
@@ -138,11 +150,14 @@ export default function HomePage() {
   const [monthlyPrice, setMonthlyPrice] = useState('')
   const [householdInterest, setHouseholdInterest] = useState('')
   const [wantToHelp, setWantToHelp] = useState('')
+  const [location, setLocation] = useState('')
   const [contactName, setContactName] = useState('')
-  const [contactInfo, setContactInfo] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
   const [comments, setComments] = useState('')
 
   const [bakgrundOpen, setBakgrundOpen] = useState(false)
+  const [attempted, setAttempted] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -155,12 +170,12 @@ export default function HomePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setAttempted(true)
 
-    if (!respondentType) { setError('Besvara fråga 1: Vem svarar du som?'); return }
-    if (!membershipInterest) { setError('Besvara fråga 2: Hur intresserad är du?'); return }
-    if (!monthlyPrice) { setError('Besvara fråga 4: Vad kan du tänka dig att betala?'); return }
-    if (!householdInterest) { setError('Besvara fråga 5: Fler i hushållet?'); return }
-    if (!wantToHelp) { setError('Besvara fråga 6: Vill du hjälpa till?'); return }
+    if (!respondentType || !membershipInterest || !monthlyPrice || !householdInterest || !wantToHelp || !location) {
+      setError('Fyll i alla markerade frågor ovan.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -175,8 +190,10 @@ export default function HomePage() {
           monthlyPrice,
           householdInterest,
           wantToHelp,
+          location,
           contactName: contactName.trim(),
-          contactInfo: contactInfo.trim(),
+          contactEmail: contactEmail.trim(),
+          contactPhone: contactPhone.trim(),
           comments: comments.trim(),
         }),
       })
@@ -196,14 +213,11 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-stone-50 py-12 px-4">
       {bakgrundOpen && <BakgrundModal onClose={() => setBakgrundOpen(false)} />}
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-2xl mx-auto">
 
         {/* Header */}
         <div className="mb-8">
-          <div className="inline-block bg-stone-800 text-stone-100 text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
-            Spinnrock / Väveriet
-          </div>
-          <h1 className="text-3xl font-bold text-stone-900 mb-4">
+<h1 className="text-3xl font-bold text-stone-900 mb-4">
             Rum för rörelse i Väveriet
           </h1>
           <div className="text-stone-600 text-base leading-relaxed space-y-3">
@@ -226,7 +240,7 @@ export default function HomePage() {
           <form onSubmit={handleSubmit} noValidate className="space-y-10">
 
             {/* Q1 */}
-            <div>
+            <div className={attempted && !respondentType ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
               <QuestionLabel n={1} text="Jag svarar som:" required />
               <RadioGroup
                 name="respondentType"
@@ -237,7 +251,7 @@ export default function HomePage() {
             </div>
 
             {/* Q2 */}
-            <div>
+            <div className={attempted && !membershipInterest ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
               <QuestionLabel n={2} text="Hur intresserad är du av att bli medlem?" required />
               <RadioGroup
                 name="membershipInterest"
@@ -250,7 +264,7 @@ export default function HomePage() {
             {/* Q3 */}
             <div>
               <QuestionLabel n={3} text="Vad skulle du främst vilja använda rummet till?" />
-              <p className="text-xs text-stone-500 mb-3">Välj alla som stämmer</p>
+              <p className="text-sm text-stone-500 mb-3">Välj alla som stämmer. Använd Annat om det är något du saknar på listan!</p>
               <div className="space-y-2">
                 {ACTIVITIES.map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-3 cursor-pointer group">
@@ -260,7 +274,7 @@ export default function HomePage() {
                       onChange={() => toggleActivity(key)}
                       className="w-4 h-4 rounded text-stone-800 border-stone-400 focus:ring-stone-700 cursor-pointer"
                     />
-                    <span className="text-stone-700 text-sm group-hover:text-stone-900 transition">{label}</span>
+                    <span className="text-stone-700 text-base group-hover:text-stone-900 transition">{label}</span>
                   </label>
                 ))}
               </div>
@@ -270,13 +284,13 @@ export default function HomePage() {
                   value={activitiesOther}
                   onChange={e => setActivitiesOther(e.target.value)}
                   placeholder="Beskriv gärna vad..."
-                  className="mt-3 w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-sm"
+                  className="mt-3 w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-base"
                 />
               )}
             </div>
 
             {/* Q4 */}
-            <div>
+            <div className={attempted && !monthlyPrice ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
               <QuestionLabel n={4} text="Hur mycket skulle du kunna tänka dig att betala per månad?" required />
               <RadioGroup
                 name="monthlyPrice"
@@ -287,8 +301,9 @@ export default function HomePage() {
             </div>
 
             {/* Q5 */}
-            <div>
+            <div className={attempted && !householdInterest ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
               <QuestionLabel n={5} text="Skulle fler i ditt hushåll kunna vara intresserade?" required />
+              <p className="text-sm text-stone-500 mb-3">Uppmana gärna fler i familjen att svara på formuläret!</p>
               <RadioGroup
                 name="householdInterest"
                 options={HOUSEHOLD_INTERESTS}
@@ -298,9 +313,9 @@ export default function HomePage() {
             </div>
 
             {/* Q6 */}
-            <div>
+            <div className={attempted && !wantToHelp ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
               <QuestionLabel n={6} text="Vill du vara med och hjälpa till redan innan rummet finns?" required />
-              <p className="text-xs text-stone-500 mb-3">
+              <p className="text-sm text-stone-500 mb-3">
                 Till exempel med att bilda förening, driva frågan ideellt, söka stöd, bygga, planera eller organisera.
               </p>
               <RadioGroup
@@ -312,51 +327,72 @@ export default function HomePage() {
             </div>
 
             {/* Q7 */}
+            <div className={attempted && !location ? 'bg-red-50 border border-red-300 rounded-xl p-4' : ''}>
+              <QuestionLabel n={7} text="Bor du?" required />
+              <RadioGroup
+                name="location"
+                options={LOCATIONS}
+                value={location}
+                onChange={setLocation}
+              />
+            </div>
+
+            {/* Q8 */}
             <div className="border border-stone-200 rounded-xl p-5 bg-stone-50 space-y-4">
               <div>
-                <p className="text-sm font-semibold text-stone-800 mb-1">
-                  <span className="text-stone-400 font-normal mr-1">7.</span>
+                <p className="text-base font-semibold text-stone-800 mb-1">
+                  <span className="text-stone-400 font-normal mr-1">8.</span>
                   Kontaktuppgifter
                   <span className="text-stone-400 font-normal ml-1.5">(frivilligt)</span>
                 </p>
-                <p className="text-xs text-stone-500 mb-3">Lämna din kontaktinfo om du vill att vi hör av oss.</p>
+                <p className="text-sm text-stone-500 mb-3">Lämna din kontaktinfo om du vill att vi hör av oss, tex om framtida medlemskap eller hjälp med genomförandet.</p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">Namn</label>
+                <label className="block text-sm font-medium text-stone-600 mb-1.5">Namn</label>
                 <input
                   type="text"
                   value={contactName}
                   onChange={e => setContactName(e.target.value)}
                   placeholder="Ditt namn"
-                  className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-sm"
+                  className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-base"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">E-post eller telefon</label>
+                <label className="block text-sm font-medium text-stone-600 mb-1.5">E-post</label>
                 <input
-                  type="text"
-                  value={contactInfo}
-                  onChange={e => setContactInfo(e.target.value)}
-                  placeholder="din@epost.se eller 070-000 00 00"
-                  className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-sm"
+                  type="email"
+                  value={contactEmail}
+                  onChange={e => setContactEmail(e.target.value)}
+                  placeholder="din@epost.se"
+                  className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-600 mb-1.5">Telefon</label>
+                <input
+                  type="tel"
+                  value={contactPhone}
+                  onChange={e => setContactPhone(e.target.value)}
+                  placeholder="070-000 00 00"
+                  className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition text-base"
                 />
               </div>
             </div>
 
-            {/* Q8 */}
+            {/* Q9 */}
             <div>
-              <p className="text-sm font-semibold text-stone-800 mb-1">
-                <span className="text-stone-400 font-normal mr-1">8.</span>
+              <p className="text-base font-semibold text-stone-800 mb-1">
+                <span className="text-stone-400 font-normal mr-1">9.</span>
                 Övriga tankar eller idéer
                 <span className="text-stone-400 font-normal ml-1.5">(valfritt)</span>
               </p>
-              <p className="text-xs text-stone-500 mb-3">Vad skulle göra att du verkligen ville använda rummet?</p>
+              <p className="text-sm text-stone-500 mb-3">Vad skulle göra att du verkligen ville använda rummet?</p>
               <textarea
                 value={comments}
                 onChange={e => setComments(e.target.value)}
                 rows={3}
                 placeholder="Skriv gärna..."
-                className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition resize-none text-sm"
+                className="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800 focus:border-transparent transition resize-none text-base"
               />
             </div>
 
@@ -376,8 +412,12 @@ export default function HomePage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-stone-400 mt-6">
+        <p className="text-center text-sm text-stone-400 mt-6">
           Dina svar används enbart för att planera verksamheten och delas inte med tredje part.
+        </p>
+        <p className="text-center text-sm text-stone-400 mt-2">
+          Formuläret framtaget i samarbete med{' '}
+          <a href="https://www.spinnrock.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-stone-600 transition">Spinnrock</a>
         </p>
       </div>
     </main>

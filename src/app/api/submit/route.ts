@@ -3,10 +3,11 @@ import { getDb } from '@/lib/mongodb'
 
 const RESPONDENT_TYPES = ['ungdom', 'vuxen', 'foralder', 'annat']
 const MEMBERSHIP_INTERESTS = ['supersaker', 'troligen', 'kanske', 'nyfiken', 'inte']
-const ACTIVITIES = ['gym', 'klattring', 'lek', 'parkour', 'crossfit', 'skejt', 'rorlighet', 'annat']
+const ACTIVITIES = ['gym', 'klattring', 'lek', 'parkour', 'crossfit', 'skejt', 'rorlighet', 'grupptraning', 'annat']
 const MONTHLY_PRICES = ['400', '300', '200', '100', 'avgörande', 'vet_inte']
 const HOUSEHOLD_INTERESTS = ['barn', 'vuxna', 'bada', 'nej', 'vet_inte']
 const WANT_TO_HELP = ['ja', 'kanske', 'inte_nu']
+const LOCATIONS = ['uddebo', 'tranemo', 'langre_bort']
 
 export async function POST(request: Request) {
   let body: unknown
@@ -25,8 +26,10 @@ export async function POST(request: Request) {
   const monthlyPrice = data.monthlyPrice as string | undefined
   const householdInterest = data.householdInterest as string | undefined
   const wantToHelp = data.wantToHelp as string | undefined
+  const location = data.location as string | undefined
   const contactName = (data.contactName as string | undefined)?.trim() || ''
-  const contactInfo = (data.contactInfo as string | undefined)?.trim() || ''
+  const contactEmail = (data.contactEmail as string | undefined)?.trim() || ''
+  const contactPhone = (data.contactPhone as string | undefined)?.trim() || ''
   const comments = (data.comments as string | undefined)?.trim() || ''
 
   if (!respondentType || !RESPONDENT_TYPES.includes(respondentType)) {
@@ -47,6 +50,9 @@ export async function POST(request: Request) {
   if (!wantToHelp || !WANT_TO_HELP.includes(wantToHelp)) {
     return NextResponse.json({ error: 'Besvara fråga 6' }, { status: 400 })
   }
+  if (!location || !LOCATIONS.includes(location)) {
+    return NextResponse.json({ error: 'Besvara fråga 7' }, { status: 400 })
+  }
 
   try {
     const db = await getDb()
@@ -58,8 +64,10 @@ export async function POST(request: Request) {
       monthlyPrice,
       householdInterest,
       wantToHelp,
+      location,
       contactName,
-      contactInfo,
+      contactEmail,
+      contactPhone,
       comments,
       createdAt: new Date(),
     })

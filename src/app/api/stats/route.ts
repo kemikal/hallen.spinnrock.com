@@ -19,7 +19,7 @@ export async function GET() {
       col.aggregate([{ $group: { _id: '$membershipInterest', count: { $sum: 1 } } }]).toArray(),
       col
         .aggregate([
-          { $unwind: { path: '$activities', preserveNullAndEmpty: false } },
+          { $unwind: { path: '$activities', preserveNullAndEmptyArrays: false } },
           { $group: { _id: '$activities', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ])
